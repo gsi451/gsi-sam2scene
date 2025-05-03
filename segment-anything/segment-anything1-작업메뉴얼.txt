@@ -1,0 +1,54 @@
+1. 환경 설정하기
+Python 환경을 설정합니다. Conda를 사용하는 것이 좋습니다.
+
+# Conda 설치가 되어 있지 않다면 먼저 설치해주세요
+# Miniconda 설치: https://docs.conda.io/en/latest/miniconda.html
+
+# SAM용 환경 생성 (Python 3.9 사용)
+conda create -n sam python=3.9
+conda activate sam
+
+# PyTorch 설치 (M1 맥용)
+conda install pytorch torchvision -c pytorch-nightly
+
+
+2. SAM 설치하기
+이제 SAM 모델을 설치합니다
+
+# SAM 저장소 클론
+git clone https://github.com/facebookresearch/segment-anything.git
+cd segment-anything
+
+# 패키지 설치
+pip install -e .
+
+# 필요한 추가 패키지 설치
+pip install opencv-python pycocotools matplotlib onnxruntime onnx
+
+
+3. 모델 체크포인트 다운로드
+SAM 모델 체크포인트를 다운로드합니다:
+
+# 모델 체크포인트를 저장할 디렉토리 생성
+mkdir checkpoints
+cd checkpoints
+
+# 모델 다운로드 (원하는 모델 크기 선택)
+# ViT-H (가장 큰 모델, 정확도 높음)
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+
+# 또는 중간 크기 모델
+# wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth
+
+# 또는 작은 모델 (메모리 사용량 적음)
+# wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
+
+cd ..
+
+
+4. 샘플 코드 작성하기
+segment_sample.py
+- 포인트/박스 프롬프트 모드: 사용자가 지정한 점이나 박스를 기준으로 해당 위치에 있는 '단일 객체'를 세그먼트합니다. 이 때 SAM은 사용자가 가리킨 지점이 속한 객체의 경계를 찾으려고 시도합니다.
+
+segment_sample2.py 
+- 자동 마스크 생성 모드: 이미지 전체를 분석하여 모든 가능한 객체를 자동으로 세그먼트합니다. 이 모드에서는 나무, 건물, 자동차 등 여러 객체가 개별적으로 세그먼트됩니다.
