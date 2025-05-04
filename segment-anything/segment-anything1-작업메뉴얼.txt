@@ -1,6 +1,12 @@
-1. 환경 설정하기
+# SAM (Segment Anything Model) 설치 및 사용 가이드
+
+이 문서는 Meta AI의 Segment Anything Model(SAM)을 설치하고 사용하는 과정을 단계별로 안내합니다.
+
+## 1. 환경 설정하기
+
 Python 환경을 설정합니다. Conda를 사용하는 것이 좋습니다.
 
+```bash
 # Conda 설치가 되어 있지 않다면 먼저 설치해주세요
 # Miniconda 설치: https://docs.conda.io/en/latest/miniconda.html
 
@@ -10,11 +16,13 @@ conda activate sam
 
 # PyTorch 설치 (M1 맥용)
 conda install pytorch torchvision -c pytorch-nightly
+```
 
+## 2. SAM 설치하기
 
-2. SAM 설치하기
-이제 SAM 모델을 설치합니다
+이제 SAM 모델을 설치합니다.
 
+```bash
 # SAM 저장소 클론
 git clone https://github.com/facebookresearch/segment-anything.git
 cd segment-anything
@@ -24,11 +32,13 @@ pip install -e .
 
 # 필요한 추가 패키지 설치
 pip install opencv-python pycocotools matplotlib onnxruntime onnx
+```
 
+## 3. 모델 체크포인트 다운로드
 
-3. 모델 체크포인트 다운로드
 SAM 모델 체크포인트를 다운로드합니다:
 
+```bash
 # 모델 체크포인트를 저장할 디렉토리 생성
 mkdir checkpoints
 cd checkpoints
@@ -44,11 +54,124 @@ wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 # wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
 
 cd ..
+```
 
+## 4. 샘플 코드 작성하기
 
-4. 샘플 코드 작성하기
-segment_sample.py
-- 포인트/박스 프롬프트 모드: 사용자가 지정한 점이나 박스를 기준으로 해당 위치에 있는 '단일 객체'를 세그먼트합니다. 이 때 SAM은 사용자가 가리킨 지점이 속한 객체의 경계를 찾으려고 시도합니다.
+SAM은 두 가지 주요 모드로 작동합니다:
 
-segment_sample2.py 
-- 자동 마스크 생성 모드: 이미지 전체를 분석하여 모든 가능한 객체를 자동으로 세그먼트합니다. 이 모드에서는 나무, 건물, 자동차 등 여러 객체가 개별적으로 세그먼트됩니다.
+### segment_sample.py - 포인트/박스 프롬프트 모드
+
+사용자가 지정한 점이나 박스를 기준으로 해당 위치에 있는 '단일 객체'를 세그먼트합니다. 이 때 SAM은 사용자가 가리킨 지점이 속한 객체의 경계를 찾으려고 시도합니다.
+
+### segment_sample2.py - 자동 마스크 생성 모드
+
+이미지 전체를 분석하여 모든 가능한 객체를 자동으로 세그먼트합니다. 이 모드에서는 나무, 건물, 자동차 등 여러 객체가 개별적으로 세그먼트됩니다.
+
+## 5. 샘플 코드 예제
+
+### 포인트 프롬프트를 사용한 세그멘테이션 (segment_sample.py)
+
+```python
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+import cv2
+from segment_anything import sam_model_registry, SamPredictor
+
+# 이미지 경로 및 모델 체크포인트 경로 설정
+image_path = "path/to/your/image.jpg"
+checkpoint_path = "checkpoints/sam_vit_h_4b8939.pth"
+model_type = "vit_h"  # 사용한 모델에 따라 'vit_h', 'vit_l', 'vit_b' 중 선택
+
+# 이미지 로드
+image = cv2.imread(image_path)
+image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+# SAM 모델 로드
+sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+predictor = SamPredictor(sam)
+predictor.set_image(image)
+
+# 포인트 프롬프트 정의 (이미지 좌표계에서 x, y)
+# 예: [x, y] 좌표, 객체 내부 점은 1, 외부 점은 0으로 라벨링
+input_point = np.array([[500, 375]])
+input_label = np.array([1])
+
+# 세그멘테이션 수행
+masks, scores, logits = predictor.predict(
+    point_coords=input_point,
+    point_labels=input_label,
+    multimask_output=True,  # 여러 마스크 생성 (최대 3개)
+)
+
+# 결과 시각화
+plt.figure(figsize=(10, 10))
+plt.imshow(image)
+for i, (mask, score) in enumerate(zip(masks, scores)):
+    plt.contour(mask, colors=['red', 'green', 'blue'][i % 3], linewidths=2)
+    plt.title(f"Mask {i+1}, Score: {score:.3f}")
+plt.axis('off')
+plt.savefig("output_segmentation.png")
+plt.show()
+```
+
+### 자동 마스크 생성 (segment_sample2.py)
+
+```python
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+import cv2
+from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
+
+# 이미지 경로 및 모델 체크포인트 경로 설정
+image_path = "path/to/your/image.jpg"
+checkpoint_path = "checkpoints/sam_vit_h_4b8939.pth"
+model_type = "vit_h"  # 사용한 모델에 따라 'vit_h', 'vit_l', 'vit_b' 중 선택
+
+# 이미지 로드
+image = cv2.imread(image_path)
+image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+# SAM 모델 로드
+sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+mask_generator = SamAutomaticMaskGenerator(sam)
+
+# 자동 마스크 생성
+masks = mask_generator.generate(image)
+print(f"{len(masks)} 개의 마스크가 생성되었습니다.")
+
+# 결과 시각화 함수
+def show_anns(anns):
+    if len(anns) == 0:
+        return
+    sorted_anns = sorted(anns, key=(lambda x: x['area']), reverse=True)
+    ax = plt.gca()
+    ax.set_autoscale_on(False)
+
+    img = np.ones((sorted_anns[0]['segmentation'].shape[0], sorted_anns[0]['segmentation'].shape[1], 4))
+    img[:,:,3] = 0
+    
+    for ann in sorted_anns:
+        m = ann['segmentation']
+        color_mask = np.concatenate([np.random.random(3), [0.35]])
+        img[m] = color_mask
+    
+    ax.imshow(img)
+
+# 시각화
+plt.figure(figsize=(10, 10))
+plt.imshow(image)
+show_anns(masks)
+plt.axis('off')
+plt.savefig("all_segments.png")
+plt.show()
+```
+
+## 6. 주의사항
+
+- SAM 모델은 컴퓨터 비전 분야에서 이미지 세그먼테이션을 위한 도구입니다.
+- 큰 모델(vit_h)은 정확도가 높지만 더 많은 메모리를 사용합니다. 리소스가 제한된 환경에서는 작은 모델(vit_b)을 고려하세요.
+- 자동 마스크 생성 모드는 많은 컴퓨팅 리소스를 사용할 수 있으므로, 필요에 따라 파라미터를 조정하세요.
+- GPU가 있다면 처리 속도가 크게 향상됩니다.
