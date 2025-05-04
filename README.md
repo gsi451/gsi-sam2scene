@@ -43,14 +43,8 @@ gsi-street2sim은 이미지 세그멘테이션(Segment Anything 2.1)과 3D Gauss
 
 ## 4. 시작 로드맵
 
-### 4.1 데이터 수집
-- 스마트폰으로 거리 사진 약 100장 확보
-
 ### 4.2 객체 분리 데모
-```bash
-pip install segment-anything==2.1 clip-by-openai
-python demo_sam.py --input street.jpg --output masks/
-```
+segment-anything 폴더 내용 참조
 
 ### 4.3 라벨 자동추정
 - 각 마스크 → CLIP image-text similarity 최대값으로 라벨링
