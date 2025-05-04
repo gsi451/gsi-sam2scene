@@ -1,0 +1,8 @@
+# 모든 .pth 파일 무시
+#*.pth
+
+# 또는 특정 폴더의 .pth 파일만 무시
+checkpoints/*.pth
+
+# 또는 특정 파일만 무시
+#checkpoints/sam_vit_h_4b8939.pth
